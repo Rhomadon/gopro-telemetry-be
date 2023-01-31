@@ -6,26 +6,39 @@ const fs = require('fs');
 // init express
 const app = express();
 
-let data = ''
+const readStream = fs.createReadStream('C:/Users/GIS-THINKPAD/Videos/gopro/GH019956.mp4');
 
-const stream = fs.createReadStream('C:/Users/GIS-THINKPAD/your-project/project/gitLab/dps-iri/assets/sukabumi-survey-2021/GH019956.mp4');
+let chunks = [];
 
-stream.on('error', (error) => console.log(error.message));
-stream.on('data', (chunk) => { data += chunk });
-stream.on('end', () => console.log('Reading complete'));
-
-// basic route
 app.get('/', (req, res) => {
+	readStream.on('error', (error) => console.log(error.message));
 
-	gpmfExtract(data)
-		.then(extracted => {
-			goproTelemetry(extracted, {}, telemetry => {
-				fs.writeFileSync('C:/Users/GIS-THINKPAD/your-project/project/gitLab/dps-iri/assets/sukabumi-survey-2021/output_path.json', JSON.stringify(telemetry));
-				res.send(console.log('Telemetry saved as JSON'))
-			});
-		}).catch(error => console.error(error));
+	readStream.on('data', chunk => {
+		chunks.push(chunk);
+		console.log(chunk.length)
+	});
 
-});
+	readStream.on('end', () => {
+		const buffer = Buffer.concat(chunks);
+		// buffer is now a binary buffer
+		try {
+			gpmfExtract(buffer)
+				.then(extracted => {
+					console.log('gpmf ok')
+					goproTelemetry(extracted, {}, telemetry => {
+						console.log('gopro ok')
+						fs.writeFileSync('output_path.json', JSON.stringify(telemetry))
+						res.json('all ok')
+					}).catch(error => console.error(error))
+				}).catch(error => console.error(error))
+		} catch (error) {
+			res.json({
+				message: error.message
+			})
+		}
+
+	});
+})
 
 // listen on port
 app.listen(4000, () => console.log('Server Running at http://localhost:4000'));
