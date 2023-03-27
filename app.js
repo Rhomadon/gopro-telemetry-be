@@ -1,44 +1,32 @@
-const express = require('express')
-const gpmfExtract = require('gpmf-extract');
-const goproTelemetry = require('gopro-telemetry');
-const fs = require('fs');
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const extractorRoute = require('./routes/extractorRoute');
+const morgan = require('morgan');
 
-// init express
 const app = express();
 
-const readStream = fs.createReadStream('C:/Users/GIS-THINKPAD/Videos/gopro/GH019956.mp4');
+// Menampilkan log setiap request route yang diakses
+app.use(morgan('combined'));
 
-let chunks = [];
+// Gunakan middleware "cors"
+app.use(cors());
+app.options('*', cors());
+const corsOptions = {
+  origin: 'http://localhost:8081'
+};
 
-app.get('/', (req, res) => {
-	readStream.on('error', (error) => console.log(error.message));
+app.use(cors(corsOptions));
 
-	readStream.on('data', chunk => {
-		chunks.push(chunk);
-		console.log(chunk.length)
-	});
+// Middleware untuk memproses body pada request HTTP
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-	readStream.on('end', () => {
-		const buffer = Buffer.concat(chunks);
-		// buffer is now a binary buffer
-		try {
-			gpmfExtract(buffer)
-				.then(extracted => {
-					console.log('gpmf ok')
-					goproTelemetry(extracted, {}, telemetry => {
-						console.log('gopro ok')
-						fs.writeFileSync('output_path.json', JSON.stringify(telemetry))
-						res.json('all ok')
-					}).catch(error => console.error(error))
-				}).catch(error => console.error(error))
-		} catch (error) {
-			res.json({
-				message: error.message
-			})
-		}
+// Gunakan rute yang telah dibuat
+app.use(extractorRoute);
 
-	});
-})
-
-// listen on port
-app.listen(4000, () => console.log('Server Running at http://localhost:4000'));
+// Jalankan server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
