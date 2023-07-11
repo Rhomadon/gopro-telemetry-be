@@ -13,7 +13,7 @@ app.use(morgan('combined'));
 app.use(cors());
 app.options('*', cors());
 const corsOptions = {
-  origin: 'http://localhost:8081'
+  origin: 'http://localhost:8000'
 };
 
 app.use(cors(corsOptions));
